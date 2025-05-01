@@ -11,9 +11,7 @@ services:
       - healthnavi-network
 
   admin-frontend:
-    build:
-      context: ./admin-frontend
-      target: production
+    image: richkitibwa/healthnavi-admin-frontend
     ports:
       - "80:80"
     env_file:
