@@ -1,11 +1,12 @@
+import uuid
 import json
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-from typing import List, Dict
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import text
-from database.db import get_db
 import traceback
+from typing import List, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, Path
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
+from pydantic import BaseModel
+from database.db import get_db
 
 router = APIRouter()
 
@@ -14,7 +15,13 @@ class PractitionerIds(BaseModel):
 
 @router.post("/patients")
 async def get_patients(ids: PractitionerIds, db: AsyncSession = Depends(get_db)):
+    """
+    Fetches patients associated with a list of practitioner IDs.
+    """
     try:
+        if not ids.practitioner_ids:
+            return []
+
         query = text("""
             SELECT patient_id, gender, age, practitioner_id, created_at
             FROM patients
@@ -30,25 +37,136 @@ async def get_patients(ids: PractitionerIds, db: AsyncSession = Depends(get_db))
 
 @router.post("/diagnoses")
 async def get_diagnoses(ids: PractitionerIds, db: AsyncSession = Depends(get_db)):
+    """
+    Fetches diagnoses associated with a list of practitioner IDs.
+    """
     try:
+        if not ids.practitioner_ids:
+            return []
+
         query = text("""
             SELECT diagnosis_id, patient_id, practitioner_id, age, gender,
                    respiratory_rate, oxygen_saturation, height, weight, heart_rate,
-                   temperature, presenting_symptoms, diagnosis_summary, doctor_notes,
-                   chat_history, status, diagnosis_date, created_at
+                   temperature, lung_sound, presenting_symptoms, diagnosis_summary, doctor_notes,
+                   chat_history, status, diagnosis_date, created_at, updated_at
             FROM diagnoses
             WHERE practitioner_id = ANY(:ids)
             ORDER BY diagnosis_date DESC
-        """)    
+        """)
         result = await db.execute(query, {"ids": tuple(ids.practitioner_ids)})
         rows = result.mappings().all()
+
         formatted_diagnoses = []
         for row in rows:
             diagnosis = dict(row)
-            diagnosis["chat_history"] = json.loads(diagnosis["chat_history"]) if diagnosis["chat_history"] else []
+            try:
+                diagnosis["chat_history"] = json.loads(diagnosis.get("chat_history", "null")) if diagnosis.get("chat_history") else []
+            except json.JSONDecodeError:
+                 print(f"Warning: Could not parse chat_history for diagnosis_id {diagnosis.get('diagnosis_id')}")
+                 diagnosis["chat_history"] = [] 
+
+            if isinstance(diagnosis.get("diagnosis_id"), uuid.UUID):
+                 diagnosis["diagnosis_id"] = str(diagnosis["diagnosis_id"])
+
             formatted_diagnoses.append(diagnosis)
+
         return formatted_diagnoses
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error fetching diagnoses: {str(e)}")
+
+@router.get("/diagnoses/patient/{patient_id}")
+async def get_diagnoses_by_patient(
+    patient_id: str = Path(..., description="The ID of the patient"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Fetches all diagnoses for a specific patient ID.
+    """
+    try:
+        query = text("""
+            SELECT diagnosis_id, patient_id, practitioner_id, age, gender,
+                   respiratory_rate, oxygen_saturation, height, weight, heart_rate,
+                   temperature, lung_sound, presenting_symptoms, diagnosis_summary, doctor_notes,
+                   chat_history, status, diagnosis_date, created_at, updated_at
+            FROM diagnoses
+            WHERE patient_id = :patient_id
+            ORDER BY diagnosis_date DESC
+        """)
+        result = await db.execute(query, {"patient_id": patient_id})
+        rows = result.mappings().all()
+
+        formatted_diagnoses = []
+        for row in rows:
+            diagnosis = dict(row)
+            try:
+                diagnosis["chat_history"] = json.loads(diagnosis.get("chat_history", "null")) if diagnosis.get("chat_history") else []
+            except json.JSONDecodeError:
+                 print(f"Warning: Could not parse chat_history for diagnosis_id {diagnosis.get('diagnosis_id')}")
+                 diagnosis["chat_history"] = [] 
+
+            if isinstance(diagnosis.get("diagnosis_id"), uuid.UUID):
+                 diagnosis["diagnosis_id"] = str(diagnosis["diagnosis_id"])
+
+            formatted_diagnoses.append(diagnosis)
+
+        return formatted_diagnoses
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error fetching patient diagnoses: {str(e)}")
+
+@router.post("/stats")
+async def get_stats(ids: PractitionerIds, db: AsyncSession = Depends(get_db)):
+    """
+    Fetches statistics based on a list of practitioner IDs.
+    Includes total patients, total diagnoses, diagnosis status counts, and practitioner count.
+    """
+    try:
+        if not ids.practitioner_ids:
+             return {
+                "total_patients": 0,
+                "total_diagnoses": 0,
+                "status_counts": {"in_progress": 0, "paused": 0, "complete": 0, "critical": 0},
+                "total_practitioners": 0
+            }
+
+        patients_query = text("""
+            SELECT COUNT(DISTINCT patient_id) FROM patients
+            WHERE practitioner_id = ANY(:ids)
+        """)
+        total_patients_result = await db.execute(patients_query, {"ids": ids.practitioner_ids})
+        total_patients = total_patients_result.scalar_one_or_none() or 0
+
+        diagnoses_query = text("""
+            SELECT COUNT(*) FROM diagnoses
+            WHERE practitioner_id = ANY(:ids)
+        """)
+        total_diagnoses_result = await db.execute(diagnoses_query, {"ids": tuple(ids.practitioner_ids)})
+        total_diagnoses = total_diagnoses_result.scalar_one_or_none() or 0
+
+        status_query = text("""
+            SELECT status, COUNT(*) FROM diagnoses
+            WHERE practitioner_id = ANY(:ids)
+            GROUP BY status
+        """)
+        status_result = await db.execute(status_query, {"ids": tuple(ids.practitioner_ids)})
+        status_rows = status_result.all()
+
+        status_counts = {"in_progress": 0, "paused": 0, "complete": 0, "critical": 0}
+        for status, count in status_rows:
+             if status in status_counts: 
+                status_counts[status] = count
+
+        total_practitioners = len(set(ids.practitioner_ids))
+
+        return {
+            "total_patients": total_patients,
+            "total_diagnoses": total_diagnoses,
+            "status_counts": status_counts,
+            "total_practitioners": total_practitioners
+        }
+
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error fetching statistics: {str(e)}")
     
