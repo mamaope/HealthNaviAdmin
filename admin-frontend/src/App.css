@@ -36,7 +36,7 @@
     transform: rotate(360deg);
   }
 }
-
+/* 
 .home {
   padding: 20px;
   max-width: 1200px;
@@ -51,9 +51,9 @@
 .container-full-width {
   width: 100%;
   padding: 0;
-}
+} */
 
-.diagnosis-content {
+/* .diagnosis-content {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -65,9 +65,9 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-}
+} */
 
-.chat-box {
+/* .chat-box {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -94,9 +94,9 @@
   align-self: flex-start;
   width: 100%;
   margin-bottom: 16px;
-}
+} */
 
-.doctor-bubble {
+/* .doctor-bubble {
   background-color: #e9eef6;
   padding: 12px 16px;
   border-radius: 18px 18px 0 18px;
@@ -172,9 +172,9 @@
 
 .model-response strong {
   font-weight: 600;
-}
+} */
 
-.model-response em {
+/* .model-response em {
   font-style: italic;
 }
 
@@ -198,7 +198,7 @@
   .chat-box {
     height: calc(100vh - 300px);
   }
-}
+} */
 
 /* Brand Title */
 .text-red {
@@ -214,7 +214,7 @@
   letter-spacing: -0.5px;
 }
 
-/* Responsive styles */
+/* Responsive styles
 @media (max-width: 600px) {
   .brand-title {
     font-size: 2rem !important;
@@ -236,7 +236,7 @@
 }
 
 /* Table responsive styles */
-@media (max-width: 900px) {
+/* @media (max-width: 900px) {
   .MuiTableContainer-root {
     overflow-x: auto;
   }
@@ -244,4 +244,4 @@
   .MuiTableCell-root {
     padding: 8px;
   }
-}
+} */

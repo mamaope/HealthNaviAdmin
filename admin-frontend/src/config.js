@@ -1,6 +1,6 @@
 const config = {
-    BACKEND_URL: "http://localhost:8083",
-  };
+  BACKEND_URL: process.env.REACT_APP_BACKEND_URL || "http://localhost:8083",
+};
   
-  export default config;
+export default config;
   

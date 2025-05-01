@@ -1,44 +1,49 @@
 import React, { useState } from 'react';
-import { TextField, Button, Box, Typography, Chip } from '@mui/material';
+import { TextField, Button, Box, IconButton, InputAdornment, Tooltip } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add'; 
 
-const PractitionerInput = ({ practitionerIds, onAddId, filterId, onFilter }) => {
+const PractitionerInput = ({ onAddId }) => { 
   const [newId, setNewId] = useState('');
 
   const handleAdd = () => {
-    onAddId(newId);
-    setNewId('');
+    if (newId.trim()) {
+      onAddId(newId.trim());
+      setNewId('');
+    }
+  };
+
+  const handleKeyPress = (event) => {
+    if (event.key === 'Enter') {
+      handleAdd();
+    }
   };
 
   return (
-    <>
-      {/* Input for Practitioner IDs */}
-      <Box mb={3}>
-        <TextField
-          label="Enter Practitioner ID"
-          value={newId}
-          onChange={(e) => setNewId(e.target.value)}
-          variant="outlined"
-          size="small"
-        />
-        <Button variant="contained" onClick={handleAdd} sx={{ ml: 2 }}>
-          Add ID
-        </Button>
-      </Box>
-
-      {/* Display Entered Practitioner IDs */}
-      <Box mb={3}>
-        <Typography variant="h6">Practitioner IDs:</Typography>
-        {practitionerIds.length > 0 ? (
-          practitionerIds.map((id) => (
-            <Chip key={id} label={id} sx={{ m: 0.5 }} />
-          ))
-        ) : (
-          <Typography variant="body2" color="textSecondary">
-            No practitioner IDs added yet.
-          </Typography>
-        )}
-      </Box>     
-    </>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+      <TextField
+        label="Enter Practitioner ID"
+        value={newId}
+        onChange={(e) => setNewId(e.target.value)}
+        onKeyPress={handleKeyPress} 
+        variant="outlined"
+        size="small"
+        fullWidth
+        sx={{ flexGrow: 1 }}
+        slotProps={{
+          input: {
+            endAdornment: (
+              <InputAdornment position="end">
+                <Tooltip title="Add Practitioner ID">
+                  <IconButton onClick={handleAdd} edge="end" color="primary">
+                    <AddIcon />
+                  </IconButton>
+                </Tooltip>
+              </InputAdornment>
+            ),
+          }  
+        }}
+      />
+    </Box>
   );
 };
 

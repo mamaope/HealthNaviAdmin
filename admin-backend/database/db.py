@@ -6,8 +6,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-
+DATABASE_URL = (
+    f"postgresql+asyncpg://"
+    f"{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}"
+    f"@{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}"
+    f"/{os.getenv('POSTGRES_DB')}"
+)
 engine = create_async_engine(DATABASE_URL, echo=True)
 
 # Create async session factory

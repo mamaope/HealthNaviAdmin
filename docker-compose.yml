@@ -1,0 +1,28 @@
+
+services:
+  admin-backend:
+    build:
+      context: ./admin-backend
+    ports:
+      - "8083:8083"
+    env_file:
+      - ./admin-backend/.env.local
+    networks:
+      - healthnavi-network
+
+  admin-frontend:
+    build:
+      context: ./admin-frontend
+      target: development
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./admin-frontend/.env.development
+    depends_on:
+      - admin-backend
+    networks:
+      - healthnavi-network
+
+networks:
+  healthnavi-network:
+    driver: bridge
