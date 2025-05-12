@@ -4,7 +4,16 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from dotenv import load_dotenv
 
-load_dotenv()
+ENV = os.getenv('ENV', 'development')
+if ENV == 'production':
+    # In production, set environment variables in the container
+    if not all([os.getenv('POSTGRES_USER'), os.getenv('POSTGRES_PASSWORD'),
+                os.getenv('POSTGRES_HOST'), os.getenv('POSTGRES_PORT'),
+                os.getenv('POSTGRES_DB')]):
+        raise Exception("Missing required database environment variables in production")
+else:
+    # In development, load from .env file
+    load_dotenv()
 
 DATABASE_URL = (
     f"postgresql+asyncpg://"

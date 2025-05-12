@@ -1,4 +1,3 @@
-
 services:
   admin-backend:
     build:
@@ -7,6 +6,8 @@ services:
       - "8083:8083"
     env_file:
       - ./admin-backend/.env.prod
+    environment:
+      - ENV=production
     networks:
       - healthnavi-network
 
