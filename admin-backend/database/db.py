@@ -5,23 +5,35 @@ from sqlalchemy.ext.declarative import declarative_base
 from dotenv import load_dotenv
 
 ENV = os.getenv('ENV', 'development')
-if ENV == 'production':
-    # In production, set environment variables in the container
-    if not all([os.getenv('POSTGRES_USER'), os.getenv('POSTGRES_PASSWORD'),
-                os.getenv('POSTGRES_HOST'), os.getenv('POSTGRES_PORT'),
-                os.getenv('POSTGRES_DB')]):
-        raise Exception("Missing required database environment variables in production")
-else:
-    # In development, load from .env file
+
+if ENV != 'production':
     load_dotenv()
+
+# Get database configuration from environment variables
+db_config = {
+    'host': os.environ.get('POSTGRES_HOST'),
+    'port': os.environ.get('POSTGRES_PORT'),
+    'name': os.environ.get('POSTGRES_DB'),
+    'user': os.environ.get('POSTGRES_USER'),
+    'password': os.environ.get('POSTGRES_PASSWORD')
+}
+
+# Validate that all required variables are present
+missing_vars = [key for key, value in db_config.items() if not value]
+if missing_vars:
+    raise Exception(f"Missing required database environment variables: {', '.join(f'POSTGRES_{key.upper()}' for key in missing_vars)}")
 
 DATABASE_URL = (
     f"postgresql+asyncpg://"
-    f"{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}"
-    f"@{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}"
-    f"/{os.getenv('POSTGRES_DB')}"
+    f"{db_config['user']}:{db_config['password']}"
+    f"@{db_config['host']}:{db_config['port']}"
+    f"/{db_config['name']}"
 )
-engine = create_async_engine(DATABASE_URL, echo=True)
+
+engine = create_async_engine(
+    DATABASE_URL,
+    echo=ENV != 'production'
+)
 
 # Create async session factory
 AsyncSessionLocal = sessionmaker(
