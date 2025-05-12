@@ -108,9 +108,13 @@ const Home = () => {
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
   };
-
   const handleViewChat = (diagnosis) => {
-    navigate(`/chat-history/${diagnosis.diagnosis_id}`, { state: { chatHistory: diagnosis.chat_history } });
+    navigate(`/chat-history/${diagnosis.diagnosis_id}`, { 
+      state: { 
+        chatHistory: diagnosis.chat_history,
+        doctor_notes: diagnosis.doctor_notes
+      }
+    });
   };
 
   const handleViewStats = () => {
