@@ -115,6 +115,44 @@ async def get_diagnoses_by_patient(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error fetching patient diagnoses: {str(e)}")
 
+@router.get("/diagnoses/{diagnosis_id}")
+async def get_diagnosis_by_id(
+    diagnosis_id: str = Path(..., description="The ID of the diagnosis"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Fetches a single diagnosis by its ID.
+    """
+    try:
+        query = text("""
+            SELECT diagnosis_id, patient_id, practitioner_id, age, gender,
+                   respiratory_rate, oxygen_saturation, height, weight, heart_rate,
+                   temperature, lung_sound, presenting_symptoms, diagnosis_summary, doctor_notes,
+                   chat_history, status, diagnosis_date, created_at, updated_at
+            FROM diagnoses
+            WHERE diagnosis_id = :diagnosis_id
+        """)
+        result = await db.execute(query, {"diagnosis_id": diagnosis_id})
+        row = result.mappings().first()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Diagnosis not found")
+
+        diagnosis = dict(row)
+        try:
+            diagnosis["chat_history"] = json.loads(diagnosis.get("chat_history", "null")) if diagnosis.get("chat_history") else []
+        except json.JSONDecodeError:
+            print(f"Warning: Could not parse chat_history for diagnosis_id {diagnosis_id}")
+            diagnosis["chat_history"] = []
+
+        if isinstance(diagnosis.get("diagnosis_id"), uuid.UUID):
+            diagnosis["diagnosis_id"] = str(diagnosis["diagnosis_id"])
+
+        return diagnosis
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error fetching diagnosis: {str(e)}")
+
 @router.post("/stats")
 async def get_stats(ids: PractitionerIds, db: AsyncSession = Depends(get_db)):
     """
@@ -169,4 +207,3 @@ async def get_stats(ids: PractitionerIds, db: AsyncSession = Depends(get_db)):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error fetching statistics: {str(e)}")
-    
