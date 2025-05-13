@@ -193,32 +193,38 @@ const Home = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 } }}>
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' }, 
-          alignItems: { xs: 'stretch', sm: 'center' }, 
-          gap: { xs: 2, sm: 3 }, 
-          mb: 3, 
-          width: '100%',
-          maxWidth: 800, 
-          mx: 'auto', 
-        }}
-      >
-        <Box sx={{ flexGrow: 1, minWidth: { xs: '100%', sm: 200 } }}>
-          <PractitionerInput onAddId={addPractitionerId} />
-        </Box>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" gutterBottom sx={{ textAlign: 'center' }}>
+          HealthNavi Admin Dashboard
+        </Typography>
+        
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' }, 
+            alignItems: { xs: 'stretch', sm: 'center' }, 
+            gap: { xs: 2, sm: 3 }, 
+            mb: 3, 
+            width: '100%',
+            maxWidth: 800, 
+            mx: 'auto', 
+          }}
+        >
+          <Box sx={{ flexGrow: 1, minWidth: { xs: '100%', sm: 200 } }}>
+            <PractitionerInput onAddId={addPractitionerId} />
+          </Box>
 
-        <Box sx={{ flexShrink: 0 }}>
-            <Button
-                variant="contained"
-                onClick={handleViewStats}
-                disabled={practitionerIds.length === 0 && !isLoading}
-                fullWidth={false} 
-            >
-                View Statistics
-            </Button>
+          <Box sx={{ flexShrink: 0 }}>
+              <Button
+                  variant="contained"
+                  onClick={handleViewStats}
+                  disabled={practitionerIds.length === 0 && !isLoading}
+                  fullWidth={false} 
+              >
+                  View Statistics
+              </Button>
+          </Box>
         </Box>
       </Box>
 

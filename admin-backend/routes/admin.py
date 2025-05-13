@@ -219,14 +219,17 @@ async def validate_practitioner(
     try:
         query = text("""
             SELECT EXISTS (
-                SELECT 1 FROM diagnoses WHERE practitioner_id = :practitioner_id
-                UNION
-                SELECT 1 FROM patients WHERE practitioner_id = :practitioner_id
-            ) as exists
+                SELECT 1 FROM (
+                    SELECT practitioner_id FROM patients WHERE practitioner_id = :id
+                    UNION
+                    SELECT practitioner_id FROM diagnoses WHERE practitioner_id = :id
+                ) AS combined_check
+            ) as exists;
         """)
-        result = await db.execute(query, {"practitioner_id": practitioner_id})
+        
+        result = await db.execute(query, {"id": practitioner_id})
         exists = result.scalar()
-        return {"exists": exists}
+        
+        return {"exists": bool(exists)}
     except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Error validating practitioner ID: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
