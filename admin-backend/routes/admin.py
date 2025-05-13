@@ -207,3 +207,26 @@ async def get_stats(ids: PractitionerIds, db: AsyncSession = Depends(get_db)):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error fetching statistics: {str(e)}")
+
+@router.get("/practitioner/validate/{practitioner_id}")
+async def validate_practitioner(
+    practitioner_id: str = Path(..., description="The ID of the practitioner to validate"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Validates if a practitioner ID exists in the database.
+    """
+    try:
+        query = text("""
+            SELECT EXISTS (
+                SELECT 1 FROM diagnoses WHERE practitioner_id = :practitioner_id
+                UNION
+                SELECT 1 FROM patients WHERE practitioner_id = :practitioner_id
+            ) as exists
+        """)
+        result = await db.execute(query, {"practitioner_id": practitioner_id})
+        exists = result.scalar()
+        return {"exists": exists}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error validating practitioner ID: {str(e)}")

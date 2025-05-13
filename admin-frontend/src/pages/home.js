@@ -13,13 +13,15 @@ import {
   Grid,
   Tooltip,
   Chip,
-  Button
+  Button,
+  CircularProgress
 } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import PractitionerInput from '../components/input';
 import PatientTable from '../components/PatientTable';
 import DiagnosesTable from '../components/DiagnosesTable';
-import config from '../config'; 
+import config from '../config';
+import { diagnosesCache, patientsCache } from '../utils/cacheService';
 
 const Home = () => {
   const [practitionerIds, setPractitionerIds] = useState(() => {
@@ -30,6 +32,8 @@ const Home = () => {
   const [diagnoses, setDiagnoses] = useState([]);
   const [tabValue, setTabValue] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isFreshFetch, setIsFreshFetch] = useState(false);
   const navigate = useNavigate();
   const [error, setError] = useState(null);
   const [invalidIdError, setInvalidIdError] = useState(null);
@@ -37,7 +41,19 @@ const Home = () => {
   useEffect(() => {
     localStorage.setItem('practitionerIds', JSON.stringify(practitionerIds));
     if (practitionerIds.length > 0) {
-      fetchData(practitionerIds);
+      const cacheKey = practitionerIds.sort().join(',');
+      const cachedPatients = patientsCache.get(cacheKey);
+      const cachedDiagnoses = diagnosesCache.get(cacheKey);
+
+      if (cachedPatients && cachedDiagnoses) {
+        setPatients(cachedPatients);
+        setDiagnoses(cachedDiagnoses);
+        setIsLoading(false);
+        setError(null);
+        fetchFreshData(practitionerIds);
+      } else {
+        fetchData(practitionerIds);
+      }
     } else {
       setPatients([]);
       setDiagnoses([]);
@@ -59,6 +75,28 @@ const Home = () => {
     setPractitionerIds(updatedIds);
   };
 
+  const fetchFreshData = async (ids) => {
+    setIsFreshFetch(true);
+    try {
+      const [patientsRes, diagnosesRes] = await Promise.all([
+        axios.post(`${config.BACKEND_URL}/api/patients`, { practitioner_ids: ids }),
+        axios.post(`${config.BACKEND_URL}/api/diagnoses`, { practitioner_ids: ids }),
+      ]);
+
+      const cacheKey = ids.sort().join(',');
+      patientsCache.set(cacheKey, patientsRes.data);
+      diagnosesCache.set(cacheKey, diagnosesRes.data);
+
+      setPatients(patientsRes.data);
+      setDiagnoses(diagnosesRes.data);
+      setInvalidIdError(null);
+    } catch (error) {
+      console.error('Error in background fetch:', error);
+    } finally {
+      setIsFreshFetch(false);
+    }
+  };
+
   const fetchData = async (ids) => {
     if (ids.length === 0) {
       setPatients([]);
@@ -76,18 +114,18 @@ const Home = () => {
         axios.post(`${config.BACKEND_URL}/api/diagnoses`, { practitioner_ids: ids }),
       ]);
 
-      const fetchedPatients = patientsRes.data;
-      const fetchedDiagnoses = diagnosesRes.data;
+      const cacheKey = ids.sort().join(',');
+      patientsCache.set(cacheKey, patientsRes.data);
+      diagnosesCache.set(cacheKey, diagnosesRes.data);
 
       setPatients(patientsRes.data);
       setDiagnoses(diagnosesRes.data);
 
-       if (ids.length > 0 && fetchedPatients.length === 0 && fetchedDiagnoses.length === 0) {
+      if (ids.length > 0 && patientsRes.data.length === 0 && diagnosesRes.data.length === 0) {
         setInvalidIdError("No data found for the provided Practitioner ID(s). Please check if the ID(s) are correct.");
-     } else {
+      } else {
         setInvalidIdError(null); 
-     }
-
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       setPatients([]); 
@@ -99,15 +137,16 @@ const Home = () => {
       } else {
         setError('Failed to fetch data. Please check your network connection and try again.');
       }
-
     } finally {
       setIsLoading(false);
+      setIsInitialLoad(false);
     }
   };
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
   };
+
   const handleViewChat = (diagnosis) => {
     navigate(`/chat-history/${diagnosis.diagnosis_id}`, { 
       state: { 
@@ -119,7 +158,28 @@ const Home = () => {
 
   const handleViewStats = () => {
     navigate('/statistics', { state: { practitionerIds: practitionerIds } });
- };
+  };
+
+  const LoadingIndicator = () => (
+    <Box sx={{ width: '100%', position: 'relative' }}>
+      {[...Array(3)].map((_, i) => (
+        <Skeleton
+          key={i}
+          variant="rectangular"
+          sx={{ mb: 2, height: 60, borderRadius: 1 }}
+        />
+      ))}
+      <CircularProgress
+        sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          marginTop: '-20px',
+          marginLeft: '-20px'
+        }}
+      />
+    </Box>
+  );
 
   const renderSkeletonTable = () => {
     return (
@@ -190,6 +250,12 @@ const Home = () => {
         </Alert>
       )}
 
+      {isFreshFetch && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Refreshing data...
+        </Alert>
+      )}
+
       {practitionerIds.length === 0 ? (
         <Paper elevation={3} sx={{ p: 3, textAlign: 'center', mt: 3 }}>
           <Typography variant="h6" color="textSecondary">
@@ -217,7 +283,7 @@ const Home = () => {
             </Tabs>
             <Box p={{ xs: 2, sm: 3 }} sx={{ overflowX: 'auto' }}>
               {isLoading ? (
-                renderSkeletonTable()
+                <LoadingIndicator />
               ) : (
                 <>
                   {tabValue === 0 && <PatientTable patients={patients} />}

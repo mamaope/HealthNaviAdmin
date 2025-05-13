@@ -2,6 +2,7 @@ import os
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.pool import AsyncAdaptedQueuePool
 from dotenv import load_dotenv
 
 ENV = os.getenv('ENV', 'development')
@@ -32,7 +33,13 @@ DATABASE_URL = (
 
 engine = create_async_engine(
     DATABASE_URL,
-    echo=ENV != 'production'
+    echo=ENV != 'production',
+    pool_size=20,  # Increased pool size for production
+    max_overflow=30,  # Allow more connections when pool is full
+    pool_timeout=30,  # Timeout for getting a connection from pool
+    pool_pre_ping=True,  # Enable connection health checks
+    poolclass=AsyncAdaptedQueuePool,  # Use async-compatible pool
+    pool_recycle=1800  # Recycle connections every 30 minutes
 )
 
 # Create async session factory
@@ -41,6 +48,7 @@ AsyncSessionLocal = sessionmaker(
     autoflush=False,
     bind=engine,
     class_=AsyncSession,
+    expire_on_commit=False  # Prevent expired objects after commit
 )
 
 Base = declarative_base()
