@@ -34,12 +34,12 @@ DATABASE_URL = (
 engine = create_async_engine(
     DATABASE_URL,
     echo=ENV != 'production',
-    pool_size=20,  # Increased pool size for production
-    max_overflow=30,  # Allow more connections when pool is full
-    pool_timeout=30,  # Timeout for getting a connection from pool
-    pool_pre_ping=True,  # Enable connection health checks
-    poolclass=AsyncAdaptedQueuePool,  # Use async-compatible pool
-    pool_recycle=1800  # Recycle connections every 30 minutes
+    pool_size=20,  
+    max_overflow=30, 
+    pool_timeout=30,  
+    pool_pre_ping=True,  
+    poolclass=AsyncAdaptedQueuePool, 
+    pool_recycle=1800
 )
 
 # Create async session factory
@@ -48,7 +48,7 @@ AsyncSessionLocal = sessionmaker(
     autoflush=False,
     bind=engine,
     class_=AsyncSession,
-    expire_on_commit=False  # Prevent expired objects after commit
+    expire_on_commit=False 
 )
 
 Base = declarative_base()
